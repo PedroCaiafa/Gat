@@ -4,6 +4,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/spf13/viper"
 )
@@ -31,9 +32,24 @@ type AppConfig struct {
 	GlobalQdrantAPIKey   string         `mapstructure:"global_qdrant_api_key"`
 	GlobalCollectionName string         `mapstructure:"global_collection_name"`
 	UVPath               string         `mapstructure:"uv_path"`
+	QdrantMode           string         `mapstructure:"qdrant_mode"`        // "bundled" | "external" | "disabled"
+	QdrantBinaryPath     string         `mapstructure:"qdrant_binary_path"` // optional override; if empty we autodetect next to the pyhelp binary
 }
 
 func Default() AppConfig {
+	var qdrantBinaryPath string
+
+	switch runtime.GOOS {
+	case "windows":
+		qdrantBinaryPath = "qdrant.exe"
+	case "linux":
+		qdrantBinaryPath = "qdrant"
+	case "darwin":
+		qdrantBinaryPath = "qdrant"
+	default:
+		qdrantBinaryPath = ""
+	}
+
 	return AppConfig{
 		ChatProvider: ProviderConfig{
 			Provider:     ProviderOpenAI,
@@ -45,9 +61,11 @@ func Default() AppConfig {
 			APIKey:       "",
 			DefaultModel: "text-embedding-3-small",
 		},
-		QdrantAddress:  "http://localhost:6334",
-		QdrantAPIKey:   "",
-		CollectionName: "gat-py-tools",
+		QdrantAddress:    "http://localhost:6334",
+		QdrantAPIKey:     "",
+		CollectionName:   "gat-py-tools",
+		QdrantMode:       "bundled",
+		QdrantBinaryPath: qdrantBinaryPath,
 	}
 }
 
@@ -122,6 +140,8 @@ func SaveConfig(config AppConfig) error {
 	v.Set("qdrant_api_key", config.QdrantAPIKey)
 	v.Set("collection_name", config.CollectionName)
 	v.Set("uv_path", config.UVPath)
+	v.Set("qdrant_mode", config.QdrantMode)
+	v.Set("qdrant_binary_path", config.QdrantBinaryPath)
 
 	if err := v.WriteConfigAs(path); err != nil {
 		return err
