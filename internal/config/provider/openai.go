@@ -26,7 +26,7 @@ func NewOpenAIProvider(apiKey string, embedModel string, chatModel string) *Open
 	}
 }
 
-// OpenAI API request/response structures for embeddings
+// ///////////// COISAS DE EMBEDDING  //////////////////////
 type embeddingRequest struct {
 	Model string   `json:"model"`
 	Input []string `json:"input"`
@@ -117,3 +117,5 @@ func (o *OpenAIProvider) Embed(text string) ([]float32, error) {
 
 	return out, nil
 }
+
+///////////////////////////////////////////////////

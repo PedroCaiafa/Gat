@@ -2,10 +2,11 @@ package qstore
 
 import (
 	"context"
+	"time"
 
-	qdrant "github.com/qdrant/go-client/qdrant"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"github.com/qdrant/go-client/qdrant"
+
+	"gat/internal/config"
 )
 
 // dado relacionado ao vetor
@@ -15,53 +16,58 @@ type Item struct {
 	Description string `json:"description"`
 }
 
-type Store struct {
-	points     qdrant.PointsClient
-	colls      qdrant.CollectionsClient
+type QStore struct {
+	client     *qdrant.Client
 	collection string
-	model      string
-	dim        int
-	conn       *grpc.ClientConn
 }
 
-func New(address, collection string, model string, dim int) (*Store, error) {
-	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+func CtxTimeout(d time.Duration) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), d)
+}
+
+func NewQStore(cfg config.AppConfig) (*QStore, error) {
+	client, err := qdrant.NewClient(&qdrant.Config{
+		Host:   cfg.QdrantAddress,
+		Port:   cfg.QdrantPort,
+		APIKey: cfg.QdrantAPIKey,
+	})
 	if err != nil {
 		return nil, err
 	}
-
-	return &Store{
-		points:     qdrant.NewPointsClient(conn),
-		colls:      qdrant.NewCollectionsClient(conn),
-		collection: collection,
-		model:      model,
-		dim:        dim,
-		conn:       conn,
+	return &QStore{
+		client:     client,
+		collection: cfg.CollectionName,
 	}, nil
 }
 
-// encerra conexao com o qdrant
-func (s *Store) Close() error {
-	if s.conn != nil {
-		return s.conn.Close()
+func ensureCollection(cfg config.AppConfig) error {
+	st, err := NewQStore(cfg)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := CtxTimeout(10 * time.Second)
+	defer cancel()
+	exists, err := st.client.CollectionExists(ctx, cfg.CollectionName)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return st.client.CreateCollection(ctx, &qdrant.CreateCollection{
+			CollectionName: cfg.CollectionName,
+			VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
+				Size: cfg.EmbeddingDim,
+			}),
+		})
 	}
 	return nil
 }
 
-// cria collection se nao existir
-func (s *Store) EnsureCollection(ctx context.Context) error {
-	if _, err := s.colls.Get(ctx, &qdrant.GetCollection{
-		CollectionName: s.collection,
-	}); err == nil {
-		return nil
+/*func defaultQdrantDataDir() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "."
 	}
-
-	_, err := s.colls.CreateCollection(ctx, &qdrant.CreateCollection{
-		CollectionName: s.collection,
-		VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
-			Size:     int32(s.dim),
-			Distance: qdrant.Distance_Cosine,
-		}),
-	})
-	return err
+	return filepath.Join(home, ".llm-pyhelp", "qdrant")
 }
+*/

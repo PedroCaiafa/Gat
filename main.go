@@ -1,6 +1,8 @@
 /*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
+OCT 2025
+GAT
 
+Pedro Caiafa
 */
 package main
 

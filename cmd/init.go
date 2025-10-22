@@ -11,6 +11,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func printWelcome() {
+	fmt.Println("╔═══════════════════╗")
+	fmt.Println("║      G A T        ║")
+	fmt.Println("╚═══════════════════╝")
+
+	//fmt.Printf("Chat Provider: %s\nChat Default Model: %s\n\n", cfgFile.ChatProvider.Provider, cfgFile.ChatProvider.DefaultModel)
+	//fmt.Printf("Embedding Provider: %s\nEmbedding Default Model: %s\n\n", cfgFile.EmbeddingProvider.Provider, cfgFile.EmbeddingProvider.DefaultModel)
+}
+
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init",
@@ -25,11 +34,19 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		fmt.Println("╔═══════════════════╗")
-		fmt.Println("║      G A T        ║")
-		fmt.Println("╚═══════════════════╝")
-		fmt.Printf("Chat Provider: %s\nChat Default Model: %s\n\n", cfgFile.ChatProvider.Provider, cfgFile.ChatProvider.DefaultModel)
-		fmt.Printf("Embedding Provider: %s\nEmbedding Default Model: %s\n\n", cfgFile.EmbeddingProvider.Provider, cfgFile.EmbeddingProvider.DefaultModel)
+
+		/*
+			-------------------------------	QDRANT SETUP ---------------------------------
+		*/
+		switch cfgFile.QdrantMode {
+		case "disabled":
+			fmt.Println("Running without Qdrant - memory features are OFF")
+			return nil
+
+		case "external":
+
+		}
+
 		return nil
 	},
 }
